@@ -7,7 +7,7 @@ Cellular Engineering Group at the National Institute of Standards and Technology
 ## Overview
 ARTISTIC is a Python-based software designed to methodize molecular signal transduction using the ARTIST (Aptamer-Regulated Transcription for In-vitro Sensing and Transduction) platform. The software provides tools for:
 
-### dART Design: Generate DNA templates for aptamer-regulated transcription (dARTs) based on an input aptamer, reported Kd, and reported salt/buffer conditions
+dART Design: Generate DNA templates for aptamer-regulated transcription (dARTs) based on an input aptamer, reported Kd, and reported salt/buffer conditions
 Kd,apparent Fit: Normalize RFU vs time kinetic plots and extract dissociation constants from kinetic plot 
 Analog: Prescribe experimentation for analog response based on desired detection range and simulate dose-response curves
 Digital: Prescribe experimentation for digital response based on desired threshold and simulate dose-response curves
