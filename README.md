@@ -6,12 +6,12 @@ Schulman Lab at the Johns Hopkins University
 Cellular Engineering Group at the National Institute of Standards and Technology
 
 Overview
-ARTISTIC is a Python-based graphical application for designing and simulating RNA-based molecular sensors using the ARTIST (Aptamer-Regulated dART-Initiated Synthesis Translation) platform. The software provides tools for:
+ARTISTIC is a Python-based software designed to methodize molecular signal transduction using the ARTIST (Aptamer-Regulated Transcription for In-vitro Sensing and Transduction) platform. The software provides tools for:
 
-dART Design: Generate optimized DNA templates for aptamer-regulated txn based on input aptamer 
-Kd,apparent Fitting: Normalize RFU vs time kinetic plots and extract dissociation constants from kinetic plot 
-Analog:Simulate dose-response curve and prescribe experimenta for analog sensor
-Digital: Simulate dose-response curve and prescribe experiment for digital sensor
+dART Design: Generate DNA templates for aptamer-regulated transcription (dARTs) based on an input aptamer, reported Kd, and reported salt/buffer conditions
+Kd,apparent Fit: Normalize RFU vs time kinetic plots and extract dissociation constants from kinetic plot 
+Analog: Prescribe experimentation for analog response based on desired detection range and simulate dose-response curves
+Digital: Prescribe experimentation for digital response based on desired threshold and simulate dose-response curves
 
 Operating System
 Windows: Native support with start.bat launcher
@@ -58,8 +58,8 @@ python application.py
 Features & Usage
 ARTISTIC provides four main tabs for different workflows:
 
-1. dART Design Tab
-Purpose: Generate optimized dART templates from aptamer sequences.
+1. Design
+Purpose: Generate DNA templates for aptamer-regulated transcription (dARTs) based on an input aptamer, reported Kd, and reported salt/buffer conditions
 
 Inputs:
 Aptamer sequence: DNA or RNA sequence (only A, T, C, G, U accepted)
@@ -67,7 +67,7 @@ Reported Kd: Dissociation constant in nanomolar (nM)
 Salt/buffer condition: Reported Salt/buffer composition (e.g., 150 mM NaCl, 5 mM MgCl2, PBS)
 Output domain: Select O1, O2, or O3 domains
 
-Program tests multiple insulation sequences for optimal RNA folding, evaluates secondary structure stability using ViennaRNA, and ranks designs by minimum free energy (MFE). Program then outputs to the user best dART design with sequences, RNA secondary structure visualization, and strands to order (template strand, non-template strands (nt; e.g., Prom-nt, Output-nt).
+Tests multiple insulation sequences for optimal RNA folding, evaluates secondary structure stability using ViennaRNA, and ranks designs by minimum free energy (MFE). Program then outputs to the user best dART design with sequences, RNA secondary structure visualization, and strands to order (template strand, non-template strands (nt; e.g., Prom-nt, Output-nt).
 
 User is required to order the sequences as prescribed by the software (e.g., via Integrated DNA Technologies) as standard desalting, PAGE, or HPLC purified oligo DNA or RNA strands (if RNA aptamer is used).
 Upon arrival, strands are recommended for dilution at 100 µM using MilliQ water.
@@ -79,74 +79,71 @@ dARTs whose aptamers are predicted to form a G-quadruplex* are supplemented with
 
 Detailed methods are available in the main text of the paper.
 
-2. Kd Fitting Tab
-Purpose: Normalizes raw time-lapse fluorescence data to reacted reporter kinetics and extract Kd,apparent from fit.
+2. Kd,apparent Fit
+Purpose: Normalize RFU vs time kinetic plots and extract dissociation constants from kinetic plot.
 
-Required Excel Format (from application.py):
-
+Required input: Excel sheet (.xlsx) containing time-lapse measurements of fluorescence across varying ligand concentrations
 Column 1: Time points (minutes)
 Columns 2+: RFU (Relative Fluorescence Units) for each ligand concentration
-Rows: Must match Kd multipliers (0, 1×, 2×, 2.5×, 5×, 10×, etc.)
-First row: 0× Kd, no ligand added
+Rows: Ligand concentration based on Kd multipliers (0, 1×, 2×, 2.5×, 5×, 10×, etc.)
+First row needs to be 0× Kd, no ligand added.
+At the end of the experiments, 0.5 µL of a DNA strand fully complementary strand at a final concentration of 2.5 µM needs to be added to obtain a maximum of reporter fluorescence intensity. Program normalizes fluoresence based on maximum fluorescence intensity.
 
 Parameters:
 dART conc. (nM): dART template concentration
 Reporter conc. (nM): Total reporter concentration
-Slope time point (min): Time at which to compute slope (default: 20 min)
+Txn rate (nM/min): Slope of reacted reporter kinetics at specific time point (default: 20 min)
 Kd multipliers: Comma-separated list matching Excel columns (e.g., 0, 1, 2, 2.5, 5, 10, 25, 50, 100)
 Process:
 
 Normalizes RFU data
-Fits basal transcription rate from 0 nM ligand condition
-Computes experimental slopes at specified time point
-Optimizes Kd to minimize residuals between experimental and simulated slopes
+Fits basal transcription rate from 0 nM ligand condition.
+Computes experimental slopes at specified time point.
+Optimizes Kd to minimize residuals between experimental and simulated slopes.
+
 Outputs:
-
-Fitted Kd: Best-fit dissociation constant ± error
-Fitted k_txn: Transcription rate
-Slope Comparison Table: Experimental vs. simulated slopes for each concentration
-Plots:
-Normalized RFU time courses (overlaid)
-Experimental vs. simulated slope comparison
-
+Fitted Kd: Kd based off Nelder-Mead optimization ± error
+Fitted k_txn: Basal ranscription rate
+Slope Comparison Table: Experimental slopes for each concentration
+Plots: Normalized reacted reporter kinetics (Reacted Reporter kinetics) and Dose-response curves
 Detailed methods are available in the main text of the paper.
 
 3. Analog Sensor Tab
-Purpose: Simulate dose-response curves for analog sensors.
+Purpose: Prescribe experimentation for analog response based on desired detection range and simulate dose-response curves.
 
 Parameters:
-Kd (nM): Dissociation constant (> 0 nM)
+Kd (nM): Kd,reported for prediction; Kd,apparent if fitting is done.
 k_txn: Transcription rate (range: 0.0001 – 1.0)
 dART (nM): dART template concentration (range: 10 – 200 nM)
 
 Modes:
-Single Curve: Simulate one dose-response curve at specified dART concentration
-Sweep: Generate family of curves across multiple dART concentrations
-Outputs:
+Single Curve: Simulate one dose-response curve at specified dART concentration (0 to 100 nM slider).
+Sweep: Generate family of curves across multiple dART concentrations.
 
+Outputs:
 Metrics Table:
 L10: Ligand concentration at 10% max response
 L90: Ligand concentration at 90% max response
 Inflection point (EC50)
 Sigmoid slope (Sensitivity)
 Maximum signal (maxY)
-Ligand Concentration Series: Recommended experimental concentrations
-Dose-Response Plot: Reporter signal vs. ligand concentration
+Ligand Concentration Series: Recommended experimental concentrations.
+Dose-Response Plot: Reacted Reporter vs. Ligand concentration.
 
 4. Digital Sensor Tab
-Purpose: Model threshold-based digital (bistable) RNA sensors.
+Purpose: Prescribe experimentation for digital response based on desired threshold and simulate dose-response curves
 
 Parameters:
-Kd (nM): Aptamer-ligand dissociation constant
-k_txn Ref template: Reference template transcription rate
-k_txn Inverter dART: Inverter dART transcription rate
+Kd,apparent (nM): Kd,reported for prediction; Kd,apparent if fitting is done.
+k_txn Ref template: Reference template transcription rate (assuming that ligand does not affect txn rate).
+k_txn Inverter dART: Inverter dART basal transcription rate.
 Inverter dART (nM): Fixed at 50 nM. User may toggle if desired.
 
 Modes:
-Single Curve: Simulate at one Reference template concentration (10 – 100 nM slider)
-Sweep: Generate curves across multiple Ref dART values
-Outputs:
+Single Curve: Simulate at one Reference template concentration (10 to 100 nM slider).
+Sweep: Generate curves across multiple Reference template values.
 
+Outputs:
 Threshold concentration: Ligand level triggering switch
 Maximum signal (maxY)
 Ligand titration series: 7-point series around threshold (0, 3x below threshold, 3x above threshold)
