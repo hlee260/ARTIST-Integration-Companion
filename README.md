@@ -181,7 +181,7 @@ Check that Kd multipliers match number of data columns
 Citation
 If you use ARTISTIC in your research, please cite:
 
-[Citation information to be provided by authors]
+[Reference TBD]
 
 Contact & Support
 For questions, bug reports, or feature requests:
@@ -190,4 +190,4 @@ Schulman Lab @ Johns Hopkins University : Heonjoon Lee (hlee260@jhmi.edu) and Re
 Cellular Engineering Group @ NIST: Samuel W. Schaffter ()
 GitHub: https://github.com/hlee260/ARTISTIC
 License
-[License information to be provided by authors]
+[TBD]
