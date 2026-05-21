@@ -1,0 +1,8 @@
+PySide6
+numpy
+scipy
+ViennaRNA
+matplotlib
+draw_rna
+pandas
+openpyxl
