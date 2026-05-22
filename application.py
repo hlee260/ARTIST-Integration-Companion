@@ -331,6 +331,22 @@ class MainWindow(QMainWindow):
         self.design_out.setText("\n".join(lines))
 
         strands = get_order_strands(best, gate)
+        # Reporter sequences by gate
+        reporters = {
+            "O1": [
+                ("Reporter F (O1)", "/5HEX/CTACATCCACATACTA",          "Fluorophore strand"),
+                ("Reporter Q (O1)", "GTTAATTAGTATGTGGATGTAG/3IAbRQSp/", "Quencher strand"),
+            ],
+            "O2": [
+                ("Reporter F (O2)", "/56-FAM/CTACTTTCACTTCACAA",        "Fluorophore strand"),
+                ("Reporter Q (O2)", "TGATGTTGTGAAGTGAAAGTAG/3IABkFQ/",  "Quencher strand"),
+            ],
+            "O3": [
+                ("Reporter F (O3)", "/56-FAM/TACCATCACATTCAAT",         "Fluorophore strand"),
+                ("Reporter Q (O3)", "AGGATTATTGAATGTGATGGTA/3IABkFQ/",  "Quencher strand"),
+            ],
+        }
+        strands = strands + reporters[gate]
         self.order_table.setRowCount(len(strands))
         for i, (label, seq, notes) in enumerate(strands):
             self.order_table.setItem(i, 0, QTableWidgetItem(label))
