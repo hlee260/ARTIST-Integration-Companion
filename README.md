@@ -50,8 +50,9 @@ Windows:
 
 macOS/Linux:
 - Open a terminal in the ARTISTIC directory and run:
-- bash
-- python application.py
+  - cd ~/Downloads/ARTISTIC
+  - chmod +x start.sh
+  - ./start.sh
 
 ### Features & Usage
 ARTISTIC provides four main tabs for different workflows:
