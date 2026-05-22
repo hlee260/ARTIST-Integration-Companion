@@ -199,5 +199,3 @@ For questions, bug reports, or feature requests:
 - Schulman Lab @ Johns Hopkins University : Heonjoon Lee (hlee260@jhmi.edu) and Rebecca Schulman (rschulm3@jhu.edu)
 - Cellular Engineering Group @ NIST: Samuel W. Schaffter (samuel.schaffter@nist.gov)
 - GitHub: https://github.com/hlee260/ARTIST-Integration-Companion
-## License
-[TBD]
