@@ -2,6 +2,7 @@
 Software by Heonjoon Lee, Samuel W. Schaffter, and Rebecca Schulman
 
 Schulman Lab at the Johns Hopkins University
+
 Cellular Engineering Group at the National Institute of Standards and Technology
 
 ## Overview
@@ -50,9 +51,12 @@ Windows:
 
 macOS/Linux:
 - Open a terminal in the ARTISTIC directory and run:
-  - cd ~/Downloads/ARTISTIC
-  - chmod +x start.sh
-  - ./start.sh
+  
+  cd ~/Downloads/ARTISTIC
+  
+  chmod +x start.sh
+  
+  ./start.sh
 
 ### Features & Usage
 ARTISTIC provides four main tabs for different workflows:
@@ -74,12 +78,18 @@ Generate DNA templates for aptamer-regulated transcription (dARTs) based on an i
 - Strands to order (template strand, non-template strands (nt; e.g., Prom-nt, Output-nt).
 
 - User is prescribed sequences to order by the software (e.g., via Integrated DNA Technologies) as standard desalting, PAGE, or HPLC purified oligo DNA or RNA strands (if RNA aptamer is used).
-- Upon arrival, strands are recommended for dilution at 100 µM using MilliQ water.
-- To anneal strands into dARTs, each strand is added into a 200 µL PCR tube at concentrations of 1 µL per strand in 1X NEB RNAPol reaction buffer.
-- Mixture is heated to 90 oC, incubated for 5 min, then cooled to 20 oC at a rate of 1 oC min−1.
-- dARTs whose aptamers are predicted to form a G-quadruplex* are supplemented with 100 mM of KCl during annealing.
-- G-quadruplex predictions are available under: https://bioinformatics.ramapo.edu/QGRS/index.php (Kikin and Bagga et al., Nuc. Acid Res. 34, 676-682 (2006).)
-- Detailed methods are available in the main text of the paper.
+  
+ Upon arrival, strands are recommended for dilution at 100 µM using MilliQ water.
+ 
+ To anneal strands into dARTs, each strand is added into a 200 µL PCR tube at concentrations of 1 µL per strand in 1X NEB RNAPol reaction buffer.
+
+ Mixture is heated to 90 °C, incubated for 5 min, then cooled to 20 °C at a rate of 1 °C min−1.
+
+ dARTs whose aptamers are predicted to form a G-quadruplex* are supplemented with 100 mM of KCl during annealing.
+ 
+ *G-quadruplex predictions are available under: https://bioinformatics.ramapo.edu/QGRS/index.php (Kikin and Bagga et al., Nuc. Acid Res. 34, 676-682 (2006).)
+
+ Detailed methods are available in the main text of the paper.
 
 ## 2. Kd,apparent Fit
 ### Purpose:
