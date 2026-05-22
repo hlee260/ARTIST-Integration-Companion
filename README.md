@@ -67,7 +67,7 @@ Generate DNA templates for aptamer-regulated transcription (dARTs) based on an i
 
 ### Inputs:
 - Aptamer sequence: DNA or RNA sequence (only A, T, C, G, U accepted)
-- Reported Kd: Dissociation constant in nanomolar (nM)
+- Reported Kd: Reported dissociation constant in nanomolar (nM)
 - Salt/buffer condition: Reported Salt/buffer composition (e.g., 150 mM NaCl, 5 mM MgCl2, PBS)
 - Output domain: Select O1, O2, or O3 domains
 - Tests multiple insulation sequences for optimal RNA folding, evaluates secondary structure stability using ViennaRNA, and ranks designs by minimum free energy (MFE).
@@ -87,9 +87,16 @@ Generate DNA templates for aptamer-regulated transcription (dARTs) based on an i
 
  dARTs whose aptamers are predicted to form a G-quadruplex* are supplemented with 100 mM of KCl during annealing.
  
- *G-quadruplex predictions are available under: https://bioinformatics.ramapo.edu/QGRS/index.php (Kikin and Bagga et al., Nuc. Acid Res. 34, 676-682 (2006).)
+ *Not all papers mention whether the aptamer forms a G-quadruplex. If unknown, G-quadruplex predictions are available under: https://bioinformatics.ramapo.edu/QGRS/index.php (Kikin and Bagga et al., Nuc. Acid Res. 34, 676-682 (2006).)
 
  Detailed methods are available in the main text of the paper.
+
+ - Titration grid of salt concentration vs ligand concentration. ARTISTIC picks the highest salt concentration in the input buffer/salt conditions to generate salt titration grid.
+  - Column: Monovalent salts (e.g., Na+, K+) span across 0 to 100 mM, and divalent salts (e.g., Mg2+, Ca2+) span across 0 to 5 mM.
+    - RNA aptamers should be supplemented with 2 mM of manganese!
+    - PBS (Phosphate-Buffered Saline) buffer contains ~ 137 mM of Na+. ARTISTIC will identify PBS as Na+ titration.
+  - Columns 2+: RFU (Relative Fluorescence Units) for each ligand concentration
+  - Rows: Ligand concentration based on Kd,reported multipliers (0, 1×, 2×, 2.5×, 5×, 10×, 25x, 50x, 100x Kd)
 
 ## 2. Kd,apparent Fit
 ### Purpose:
