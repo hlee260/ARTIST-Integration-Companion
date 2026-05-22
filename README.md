@@ -175,17 +175,20 @@ Prescribe experimentation for digital response based on desired threshold and si
 ## Troubleshooting
 ### Common Issues
 - "Python is not installed or not on PATH"
+
 Reinstall Python and check "Add Python to PATH". Verify with: python --version
 
 - "ViennaRNA not found"
-Install ViennaRNA with Python bindings
-Test: python -c "import RNA"
+
+Install ViennaRNA with Python bindings. Test: python -c "import RNA"
 
 - "draw_rna not available"
-RNA structures won't display visually. Install: pip install draw_rna. The program will still function without it
+
+RNA structures won't display visually. Install: pip install draw_rna. The program will still function without it.
 
 - Excel file not loading
-Ensure .xlsx format (not .xls). First column must contain numeric time values. Check that Kd multipliers match number of data columns
+
+Ensure .xlsx format (not .xls). First column must contain numeric time values. Check that Kd multipliers match number of data columns.
 
 ## Citation
 Original ARTIST paper:
