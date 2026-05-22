@@ -82,9 +82,11 @@ Generate DNA templates for aptamer-regulated transcription (dARTs) based on an i
   
  Upon arrival, strands are recommended for dilution at 100 µM using MilliQ water.
  
- To anneal strands into dARTs, each strand is added into a 200 µL PCR tube at concentrations of 1 µL per strand in 1X NEB RNAPol reaction buffer.
+ To anneal Prom-nt, Output-nt, and template strands into dARTs, each strand is added into a 200 µL PCR tube at concentrations of 1 µL per strand in 1X NEB RNAPol reaction buffer.
 
- Mixture is heated to 90 °C, incubated for 5 min, then cooled to 20 °C at a rate of 1 °C min−1.
+ Reporters (Fluorophore and Quencher strands) are also annealed by adding each strand into a 200 µL PCR tube at concentrations of 10 µL per strand in 1X NEB RNAPol reaction buffer.
+
+ Mixtures are heated to 90 °C, incubated for 5 min, then cooled to 20 °C at a rate of 1 °C min−1.
 
  dARTs whose aptamers are predicted to form a G-quadruplex* are supplemented with 100 mM of KCl during annealing.
  
