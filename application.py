@@ -334,16 +334,16 @@ class MainWindow(QMainWindow):
         # Reporter sequences by gate
         reporters = {
             "O1": [
-                ("Reporter F (O1)", "/5HEX/CTACATCCACATACTA",          "Fluorophore strand"),
-                ("Reporter Q (O1)", "GTTAATTAGTATGTGGATGTAG/3IAbRQSp/", "Quencher strand"),
+                ("O1 Reporter F", "/5HEX/CTACATCCACATACTA",          "Fluorophore strand - order standard desalted or HPLC purified"),
+                ("O1 Reporter Q", "GTTAATTAGTATGTGGATGTAG/3IAbRQSp/", "Quencher strand - order HPLC purified"),
             ],
             "O2": [
-                ("Reporter F (O2)", "/56-FAM/CTACTTTCACTTCACAA",        "Fluorophore strand"),
-                ("Reporter Q (O2)", "TGATGTTGTGAAGTGAAAGTAG/3IABkFQ/",  "Quencher strand"),
+                ("O2 Reporter F", "/56-FAM/CTACTTTCACTTCACAA",        "Fluorophore strand  - order standard desalted or HPLC purified"),
+                ("O2 Reporter Q", "TGATGTTGTGAAGTGAAAGTAG/3IABkFQ/",  "Quencher strand  - order HPLC purified"),
             ],
             "O3": [
-                ("Reporter F (O3)", "/56-FAM/TACCATCACATTCAAT",         "Fluorophore strand"),
-                ("Reporter Q (O3)", "AGGATTATTGAATGTGATGGTA/3IABkFQ/",  "Quencher strand"),
+                ("O3 Reporter F", "/56-FAM/TACCATCACATTCAAT",         "Fluorophore strand - order standard desalted or HPLC purified"),
+                ("O3 Reporter Q", "AGGATTATTGAATGTGATGGTA/3IABkFQ/",  "Quencher strand - order HPLC purified"),
             ],
         }
         strands = strands + reporters[gate]
