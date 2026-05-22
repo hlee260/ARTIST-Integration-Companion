@@ -340,12 +340,15 @@ class MainWindow(QMainWindow):
 
         salt_name, salt_conc = parse_salt(salt_str)
         s_rows = salt_rows(salt_name)
+        # If aptamer is RNA (contains U), add a fixed 2 mM MnCl2
+        is_rna = "U" in sanitize_sequence(self.apt_seq.text())
         kd = self.design_kd.value()
         ligs = lig_series(kd)
         divalent = salt_name.strip() in ("MgCl2", "CaCl2", "MnCl2", "ZnCl2")
         kind = "divalent" if divalent else "monovalent"
+        rna_note = " RNA aptamer used - add 2 mM MnCl2 to all conditions! " if is_rna else ""
         self.tit_group.setTitle(
-            f"Titration Grid — {salt_name} ({kind}) × Ligand (0–100× Kd={kd:.1f} nM)"
+            f"Titration Grid — {salt_name} ({kind}) × Ligand (0–100× Kd={kd:.1f} nM){rna_note}"
         )
         # columns = ligand concentrations, rows = salt concentrations
         self.tit_grid.setRowCount(len(s_rows))
