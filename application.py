@@ -163,7 +163,7 @@ class MainWindow(QMainWindow):
         self._last_gate = "O1"
 
         tabs = QTabWidget()
-        tabs.addTab(self._scrollable(self._build_design_tab()), "Design")
+        tabs.addTab(self._scrollable(self._build_design_tab()), "dART Design")
         tabs.addTab(self._scrollable(self._build_kd_fit_tab()), "Kd,apparent fit")
         tabs.addTab(self._scrollable(self._build_analog_tab()), "Analog")
         tabs.addTab(self._scrollable(self._build_digital_tab()), "Digital")
