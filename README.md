@@ -52,7 +52,7 @@ Windows:
 macOS/Linux:
 - Open a terminal in the ARTISTIC directory and run:
   
-  cd ~/Downloads/ARTISTIC
+  cd ~/ARTIST-Integration-Companion
   
   chmod +x start.sh
   
