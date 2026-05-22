@@ -895,10 +895,10 @@ class MainWindow(QMainWindow):
             ax.plot(time_arr, norm_mat[:, ci], color=colors[ci], lw=1.8, label=lbl)
         ax.set_xlabel("Time (min)", color="black", fontsize=10)
         ax.set_ylabel("[Reacted Reporter] (nM)", color="black", fontsize=10)
-        ax.set_title("Normalised Reacted reporter kinetics", color="black", fontsize=11)
+        ax.set_title("Normalized Reacted reporter kinetics", color="black", fontsize=11)
         ax.tick_params(colors="black"); ax.spines[:].set_color("black")
         ax.grid(True, alpha=0.15, color="#7faaa0")
-        ax.legend(fontsize=6.5, labelcolor="#c8ede7", ncol=2)
+        ax.legend(fontsize=6.5, labelcolor="black", ncol=2)
         fig.tight_layout()
         px = fig_to_pixmap(fig)
         if px:
@@ -910,15 +910,15 @@ class MainWindow(QMainWindow):
         fig2, ax2 = plt.subplots(figsize=(5.5, 3.0), dpi=110)
         ax2.set_facecolor("white"); fig2.patch.set_facecolor("white")
         ax2.plot(concs, exp_s, "o", color="#ffcc44", lw=0, ms=6, label="Experimental")
-        ax2.plot(concs, sim_s, linestyle = "--", color="#00ffa0", lw=2, ms=6, label=f"Fit (Kd={kd_fit:.1f} nM)")
+        ax2.plot(concs, sim_s, linestyle = "--", color="red", lw=2, ms=6, label=f"Fit (Kd={kd_fit:.1f} nM)")
         ax2.set_xlabel("[Ligand] (nM)", color="black", fontsize=10)
         ax2.set_xscale("log")
         ax2.set_ylabel("Txn rate at t="+f"{result['slope_time']:.0f}"+" min (nM/min)", color="black", fontsize=10)
         ax2.set_title("Dose-response curve", color="black", fontsize=11)
         ax2.tick_params(colors="black"); ax2.spines[:].set_color("black")
         ax2.grid(True, alpha=0.15, color="#7faaa0")
-        ax2.legend(fontsize=8, labelcolor="#c8ede7",
-                   facecolor="#071a17", edgecolor="#ffcc4433")
+        ax2.legend(fontsize=8, labelcolor="black",
+                   facecolor="white")
         fig2.tight_layout()
         px2 = fig_to_pixmap(fig2)
         if px2:
