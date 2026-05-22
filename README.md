@@ -61,7 +61,7 @@ macOS/Linux:
 ### Features & Usage
 ARTISTIC provides four main tabs for different workflows:
 
-## 1. Design
+## 1. dART Design
 ### Purpose:
 Generate DNA templates for aptamer-regulated transcription (dARTs) based on an input aptamer, reported Kd, and reported salt/buffer conditions.
 
@@ -129,7 +129,7 @@ Normalize RFU vs time kinetic plots and extract dissociation constants from kine
 - Plots normalized reacted reporter kinetics (Reacted Reporter kinetics) and dose-response curves
 - Detailed methods are available in the main text of the paper.
 
-## 3. Analog Sensor Tab
+## 3. Analog
 ### Purpose:
 Prescribe experimentation for analog response based on desired detection range and simulate dose-response curves.
 
@@ -152,7 +152,7 @@ Prescribe experimentation for analog response based on desired detection range a
 - Ligand Concentration Series: Recommended experimental concentrations.
 - Dose-Response Plot: Reacted Reporter vs. Ligand concentration.
 
-## 4. Digital Sensor Tab
+## 4. Digital
 ### Purpose:
 Prescribe experimentation for digital response based on desired threshold and simulate dose-response curves
 
