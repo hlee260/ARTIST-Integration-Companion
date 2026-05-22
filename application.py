@@ -85,13 +85,13 @@ def make_analog_plot(x, y, metrics, dart_nM, title_suffix=""):
     ax.tick_params(colors="black"); ax.spines[:].set_color("black")
     ax.grid(True, alpha=0.15, color="black")
     if metrics.get("L10") is not None:
-        ax.axvline(metrics["L10"], color="#00ffa0", lw=1.8, ls="--",
+        ax.axvline(metrics["L10"], color="red", lw=1.8, ls="--",
                    label=f"L10 = {metrics['L10']:.1f} nM")
     if metrics.get("L90") is not None:
-        ax.axvline(metrics["L90"], color="#00ffa0", lw=1.8, ls="--",
+        ax.axvline(metrics["L90"], color="red", lw=1.8, ls="--",
                    label=f"L90 = {metrics['L90']:.1f} nM")
     if metrics.get("inflection"):
-        ax.axvline(metrics["inflection"], color="#ff44ff", lw=1.8, ls=":",
+        ax.axvline(metrics["inflection"], color="green", lw=1.8, ls=":",
                    label=f"EC50 = {metrics['inflection']:.1f} nM")
     ax.legend(fontsize=15)
     fig.tight_layout()
