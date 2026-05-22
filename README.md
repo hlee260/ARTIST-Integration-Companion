@@ -190,7 +190,7 @@ Ensure .xlsx format (not .xls). First column must contain numeric time values. C
 ## Citation
 Original ARTIST paper:
 
-Lee, Schaffter, and Schulman et al. "Plug-and-play protein biosensors using aptamer-regulated in vitro transcription." *Nat. Commun.* **15**, 7973 (2024).
+Lee, Schaffter, and Schulman et al. "Plug-and-play protein biosensors using aptamer-regulated in vitro transcription." *Nat. Commun.* **15**, 7973 (2024). https://doi.org/10.1038/s41467-024-51907-4
 
 [ARTISTIC Reference TBD]
 
