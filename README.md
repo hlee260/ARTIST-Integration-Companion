@@ -75,7 +75,8 @@ Generate DNA templates for aptamer-regulated transcription (dARTs) based on an i
 ### Outputs:
 - Best dART design with sequences
 - RNA secondary structure visualization
-- Strands to order (template strand, non-template strands (nt; e.g., Prom-nt, Output-nt).
+- Strands to order (template strand, non-template strands (nt; e.g., Prom-nt, Output-nt), reporter strands corresponding to output (O1, O2, and O3).
+- o1_f, o2_f, and o3_f ordered standard desalted in the study. o1_q, o2_q, and o3_q must be ordered HPLC purified. 
 
 - User is prescribed sequences to order by the software (e.g., via Integrated DNA Technologies) as standard desalting, PAGE, or HPLC purified oligo DNA or RNA strands (if RNA aptamer is used).
   
