@@ -127,7 +127,7 @@ Prescribe experimentation for analog response based on desired detection range a
 
 ### Inputs:
 - Kd (nM): Kd,reported for prediction; Kd,apparent if fitting is done.
-- k_txn: Transcription rate (range: 0.0001 – 1.0)
+- Transcription rate (k_txn; (nM/min)): Transcription rate (range: 0.0001 – 1.0)
 - dART (nM): dART template concentration (range: 10 – 200 nM)
 
 ### Modes:
@@ -150,8 +150,8 @@ Prescribe experimentation for digital response based on desired threshold and si
 
 ### Inputs:
 - Kd,apparent (nM): Kd,reported for prediction; Kd,apparent if fitting is done.
-- k_txn Ref template: Reference template transcription rate (assuming that ligand does not affect txn rate).
-- k_txn Inverter dART: Inverter dART basal transcription rate.
+- k_txn Ref template (nM/min): Reference template transcription rate (assuming that ligand does not affect txn rate).
+- k_txn Inverter dART (nM/min): Inverter dART basal transcription rate.
 - Inverter dART (nM): Fixed at 50 nM. User may toggle if desired.
 
 ### Modes:
