@@ -1,5 +1,5 @@
 # ARTISTIC: ARTIST Integration Companion
-Software by Heonjoon Lee, Samuel W. Schaffter, and Rebecca Schulman
+**Software by Heonjoon Lee, Samuel W. Schaffter, and Rebecca Schulman**
 
 Schulman Lab at the Johns Hopkins University
 
@@ -88,7 +88,7 @@ Generate DNA templates for aptamer-regulated transcription (dARTs) based on an i
 
  dARTs whose aptamers are predicted to form a G-quadruplex* are supplemented with 100 mM of KCl during annealing.
  
- *Not all papers mention whether the aptamer forms a G-quadruplex. If unknown, G-quadruplex predictions are available under: https://bioinformatics.ramapo.edu/QGRS/index.php (Kikin and Bagga et al., Nuc. Acid Res. 34, 676-682 (2006).)
+ *Not all papers mention whether the aptamer forms a G-quadruplex. If unknown, G-quadruplex predictions are available under: https://bioinformatics.ramapo.edu/QGRS/index.php (Kikin and Bagga et al., *Nuc. Acid Res.* **34**, 676-682 (2006).)
 
  Detailed methods are available in the main text of the paper.
 
@@ -188,9 +188,11 @@ RNA structures won't display visually. Install: pip install draw_rna. The progra
 Ensure .xlsx format (not .xls). First column must contain numeric time values. Check that Kd multipliers match number of data columns
 
 ## Citation
-If you use ARTISTIC in your research, please cite:
+Original ARTIST paper:
 
-[Reference TBD]
+Lee, Schaffter, and Schulman et al. "Plug-and-play protein biosensors using aptamer-regulated in vitro transcription." *Nat. Commun.* **15**, 7973 (2024).
+
+[ARTISTIC Reference TBD]
 
 ## Contact & Support
 For questions, bug reports, or feature requests:
