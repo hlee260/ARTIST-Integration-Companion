@@ -23,14 +23,14 @@ ARTISTIC is a Python-based software designed to methodize molecular signal trans
 
 ### Dependencies:
 The following Python packages are required (listed in requirements.txt):
-- PySide6          # GUI framework
-- numpy            # Numerical computing
-- scipy            # Scientific computing & optimization
-- ViennaRNA        # RNA secondary structure prediction
-- matplotlib       # Plotting
-- draw_rna         # RNA structure visualization (optional)
-- pandas           # Data manipulation
-- openpyxl         # Excel file handling
+- PySide6          GUI framework
+- numpy            Numerical computing
+- scipy            Scientific computing & optimization
+- ViennaRNA        RNA secondary structure prediction
+- matplotlib       Plotting
+- draw_rna         RNA structure visualization (optional)
+- pandas           Experimental data upload and handling
+- openpyxl         Excel file handling
 
 ### Installation:
 Step 1: Install Python
