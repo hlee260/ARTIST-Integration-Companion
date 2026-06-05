@@ -145,9 +145,9 @@ def make_digital_sweep_plot(kd, k_txn_ref, k_txn_apt, apt_dart):
     ax.set_xlabel("[Ligand] (nM, log scale)", color="black", fontsize=11)
     ax.set_ylabel("[Reacted Reporter] (nM)", color="black", fontsize=11)
     ax.set_title("Digital response — Sweep Ref dART 10–100 nM", color="black", fontsize=12)
-    ax.tick_params(colors="#7faaa0"); ax.spines[:].set_color("black")
+    ax.tick_params(colors="black"); ax.spines[:].set_color("black")
     ax.grid(True, alpha=0.15, color="black", which="both")
-    ax.legend(fontsize=8, labelcolor="#c8ede7", ncol=2,
+    ax.legend(fontsize=8, labelcolor="black", ncol=2,
               title="[Ref template]", title_fontsize=8)
     fig.tight_layout()
     return fig_to_pixmap(fig)
