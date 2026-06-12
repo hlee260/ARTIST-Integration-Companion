@@ -469,7 +469,7 @@ class MainWindow(QMainWindow):
         sgl.addWidget(self.ana_sweep_table)
         ll.addWidget(sg)
 
-        lg = QGroupBox("Ligand titration Series")
+        lg = QGroupBox("Ligand Titration Series")
         lgl = QVBoxLayout(lg)
         self.ana_lig_table = QTableWidget()
         self.ana_lig_table.setColumnCount(2)
@@ -642,7 +642,7 @@ class MainWindow(QMainWindow):
         sg = QGroupBox("Reference Template Sweep (threshold per ref template)")
         sgl = QVBoxLayout(sg)
         self.dig_sweep_table = QTableWidget()
-        self.dig_sweep_table.setColumnCount(3)
+        self.dig_sweep_table.setColumnCount(2)
         self.dig_sweep_table.setHorizontalHeaderLabels(
             ["Ref template (nM)", "Threshold (nM)"])
         self.dig_sweep_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
@@ -650,7 +650,7 @@ class MainWindow(QMainWindow):
         sgl.addWidget(self.dig_sweep_table)
         ll.addWidget(sg)
 
-        lg = QGroupBox("Ligand titration Series")
+        lg = QGroupBox("Ligand Titration Series")
         lgl = QVBoxLayout(lg)
         self.dig_lig_table = QTableWidget()
         self.dig_lig_table.setColumnCount(2)
