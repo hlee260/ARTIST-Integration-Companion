@@ -118,7 +118,6 @@ def make_analog_recommend_plot(rec_curve, sweep_curves, result):
     ax.set_title(f"Analog design — recommended dART {rec['dart']:.0f} nM",
                  color="black", fontsize=12)
     ax.tick_params(colors="black"); ax.spines[:].set_color("black")
-    ax.grid(True, alpha=0.15, color="black")
     ax.legend(fontsize=8)
     fig.tight_layout()
     return fig_to_pixmap(fig)
@@ -149,7 +148,6 @@ def make_digital_recommend_plot(rec_curve, sweep_curves, result):
     ax.set_title(f"Digital design — recommended Ref template {rref:.0f} nM",
                  color="black", fontsize=12)
     ax.tick_params(colors="black"); ax.spines[:].set_color("black")
-    ax.grid(True, alpha=0.15, color="black", which="both")
     ax.legend(fontsize=8)
     fig.tight_layout()
     return fig_to_pixmap(fig)
@@ -450,7 +448,7 @@ class MainWindow(QMainWindow):
         # Left: tables
         left = QWidget(); ll = QVBoxLayout(left)
 
-        mg = QGroupBox("Recommended Design")
+        mg = QGroupBox("Recommended dART concentration")
         mgl = QVBoxLayout(mg)
         self.ana_metrics_table = QTableWidget()
         self.ana_metrics_table.setColumnCount(2)
@@ -460,7 +458,7 @@ class MainWindow(QMainWindow):
         mgl.addWidget(self.ana_metrics_table)
         ll.addWidget(mg)
 
-        sg = QGroupBox("dART Sweep (detection span & EC50)")
+        sg = QGroupBox("dART Sweep (detection range and EC50)")
         sgl = QVBoxLayout(sg)
         self.ana_sweep_table = QTableWidget()
         self.ana_sweep_table.setColumnCount(4)
@@ -471,7 +469,7 @@ class MainWindow(QMainWindow):
         sgl.addWidget(self.ana_sweep_table)
         ll.addWidget(sg)
 
-        lg = QGroupBox("Ligand Concentration Series (across detection range)")
+        lg = QGroupBox("Ligand titration Series")
         lgl = QVBoxLayout(lg)
         self.ana_lig_table = QTableWidget()
         self.ana_lig_table.setColumnCount(2)
@@ -641,18 +639,18 @@ class MainWindow(QMainWindow):
         mgl.addWidget(self.dig_metrics_table)
         ll.addWidget(mg)
 
-        sg = QGroupBox("Reference Template Sweep (threshold per ref conc.)")
+        sg = QGroupBox("Reference Template Sweep (threshold per ref template)")
         sgl = QVBoxLayout(sg)
         self.dig_sweep_table = QTableWidget()
         self.dig_sweep_table.setColumnCount(3)
         self.dig_sweep_table.setHorizontalHeaderLabels(
-            ["Ref template (nM)", "Threshold (nM)", "Max signal"])
+            ["Ref template (nM)", "Threshold (nM)"])
         self.dig_sweep_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.dig_sweep_table.setMaximumHeight(200)
         sgl.addWidget(self.dig_sweep_table)
         ll.addWidget(sg)
 
-        lg = QGroupBox("Threshold-Centered Titration Series")
+        lg = QGroupBox("Ligand titration Series")
         lgl = QVBoxLayout(lg)
         self.dig_lig_table = QTableWidget()
         self.dig_lig_table.setColumnCount(2)
@@ -661,7 +659,7 @@ class MainWindow(QMainWindow):
         lgl.addWidget(self.dig_lig_table)
         ll.addWidget(lg)
 
-        dsg = QGroupBox("Strands to Order (Reference & Inverter dART)")
+        dsg = QGroupBox("Strands to Order (Reference and Inverter dART)")
         dsgl = QVBoxLayout(dsg)
         self.dig_strands_table = QTableWidget()
         self.dig_strands_table.setColumnCount(3)
@@ -730,11 +728,7 @@ class MainWindow(QMainWindow):
         rows = [
             ("Recommended Ref template", f"{rref:.1f} nM"),
             ("Requested threshold", f"{target:.2f} nM"),
-            ("Predicted threshold at this ref", f"{predicted:.2f} nM ({match_note})"),
-            ("Aptamer dART", f"{apt_dart:.0f} nM"),
-            ("Kd", f"{kd:.3f} nM"),
-            ("k_txn ref", f"{payload['k_txn_ref']:.4f}"),
-            ("k_txn inverter", f"{payload['k_txn_apt']:.4f}"),
+            ("Predicted threshold at ref. template", f"{predicted:.2f} nM ({match_note})"),
         ]
         self.dig_metrics_table.setRowCount(len(rows))
         for i, (k, v) in enumerate(rows):
@@ -987,7 +981,6 @@ class MainWindow(QMainWindow):
         ax.set_ylabel("[Reacted Reporter] (nM)", color="black", fontsize=10)
         ax.set_title("Normalized Reacted reporter kinetics", color="black", fontsize=11)
         ax.tick_params(colors="black"); ax.spines[:].set_color("black")
-        ax.grid(True, alpha=0.15, color="#7faaa0")
         ax.legend(fontsize=6.5, labelcolor="black", ncol=2)
         fig.tight_layout()
         px = fig_to_pixmap(fig)
@@ -1006,7 +999,6 @@ class MainWindow(QMainWindow):
         ax2.set_ylabel("Txn rate at t="+f"{result['slope_time']:.0f}"+" min (nM/min)", color="black", fontsize=10)
         ax2.set_title("Dose-response curve", color="black", fontsize=11)
         ax2.tick_params(colors="black"); ax2.spines[:].set_color("black")
-        ax2.grid(True, alpha=0.15, color="#7faaa0")
         ax2.legend(fontsize=8, labelcolor="black",
                    facecolor="white")
         fig2.tight_layout()
