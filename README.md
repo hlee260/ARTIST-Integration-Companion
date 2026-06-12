@@ -74,7 +74,7 @@ Generate DNA templates for aptamer-regulated transcription (dARTs) based on an i
 
 ### Outputs:
 - Best dART design with sequences
-- RNA secondary structure visualization
+- RNA secondary structure visualization (GGGATG-CATCCC insulation domains will be used as default. If the insulation pair does not work for forming suitable RNA secondary structure, other insulation domains will be considered).
 - Strands to order (template strand, non-template strands (nt; e.g., Prom-nt, Output-nt), reporter strands corresponding to output (O1, O2, and O3).
 - o1_f, o2_f, and o3_f ordered standard desalted in the study. o1_q, o2_q, and o3_q must be ordered HPLC purified. 
 
@@ -133,46 +133,73 @@ Normalize RFU vs time kinetic plots and extract dissociation constants from kine
 
 ## 3. Analog
 ### Purpose:
-Prescribe experimentation for analog response based on desired detection range and simulate dose-response curves.
+Design analog responses quantitatively based on a desired ligand detection range, and simulate dose-response curves. In Analog mode, the final output for each ligand concentration is the Reacted Reporter concentration at 120 minutes.
 
 ### Inputs:
 - Kd (nM): Kd,reported for prediction; Kd,apparent if fitting is done.
 - Transcription rate (k_txn; (nM/min)): Transcription rate (range: 0.0001 – 1.0)
-- dART (nM): dART template concentration (range: 10 – 200 nM)
-
-### Modes:
-- Single Curve: Simulate one dose-response curve at specified dART concentration (0 to 100 nM slider).
-- Sweep: Generate family of curves across multiple dART concentrations.
+- User-defined detection range (nM): Specify the lower bound (L10) and upper bound (L90) of the target ligand response range. L90 must be greater than L10.
 
 ### Outputs:
-- Metrics Table:
+- Metrics table of recommended design:
   - L10: Ligand concentration at 10% max response
   - L90: Ligand concentration at 90% max response
-- Inflection point (EC50)
-- Sigmoid slope (Sensitivity)
-- Maximum signal (maxY)
-- Ligand Concentration Series: Recommended experimental concentrations.
-- Dose-Response Plot: Reacted Reporter vs. Ligand concentration.
+  - Inflection point (EC50)
+  - Sigmoid slope (Sensitivity)
+  - Maximum signal (maxY)
+- dART concentration sweep:
+  
+Shows the predicted detection range and EC50 for each dART concentration.
+
+The recommended dART concentration for the user-defined detection range is highlighted in green.
+
+- Dose-Response Plot:
+
+ARTISTIC sweeps dART concentrations from 10 to 200 nM to generate dose-response curves. 
+
+The dART concentration whose predicted detection range best matches the user-defined detection range is recommended.
+
+- Ligand titration series:
+
+Recommends ligand concentrations to test across the predicted detection range for the recommended dART concentration.
 
 ## 4. Digital
 ### Purpose:
-Prescribe experimentation for digital response based on desired threshold and simulate dose-response curves
+Design digital responses quantitatively based on a desired threshold, and simulate dose-response curves to identify the reference template concentration that best matches the user-defined threshold. In Digital mode, the final output for each ligand concentration is the Reacted Reporter concentration at 240 minutes.
 
 ### Inputs:
 - Kd,apparent (nM): Kd,reported for prediction; Kd,apparent if fitting is done.
 - k_txn Ref template (nM/min): Reference template transcription rate (assuming that ligand does not affect txn rate).
 - k_txn Inverter dART (nM/min): Inverter dART basal transcription rate.
-- Inverter dART (nM): Fixed at 50 nM. User may toggle if desired.
-
-### Modes:
-- Single Curve: Simulate at one Reference template concentration (10 to 100 nM slider).
-- Sweep: Generate curves across multiple Reference template values.
+- Inverter dART (nM): Fixed at 50 nM; can be toggled if desired.
+- User-defined threshold concentration: Required input for the target digital response threshold.
 
 ### Outputs:
-- Threshold concentration: Ligand level triggering switch
-- Maximum signal (maxY)
-- Ligand titration series: 7-point series around threshold (0, 3x below threshold, 3x above threshold)
-- Threshold plot: Reporter signal vs. ligand (log scale)
+- Metrics table of recommended design:
+  - Recommended Reference template concentration (nM).
+  - User-defined threshold concentration (nM).
+  - Predicted threshold for the recommended Ref. template concentration (nM).
+- Reference template sweep:
+
+  Shows the threshold concentration for each reference template concentration.
+
+  The concentration that best matches the user-defined threshold is highlighted in green.
+  
+- Ligand titration series:
+
+  Provides a 7-point ligand series around the threshold: 3 points below threshold threshold and point 3 points above threshold.
+  
+- Dose-Response Plot:
+
+  ARTISTIC sweeps reference template concentrations from 10 to 200 nM to generate dose-response curves.
+
+  The reference template concentration whose predicted threshold is closest to the user-defined threshold is recommended.
+  
+- Strands to order: 
+
+  ARTISTIC outputs the sequences for the reference template strands and inverter dART strands.
+
+  The annealing process for both follows the description above under 1. dART Design.
 
 ## Troubleshooting
 ### Common Issues
