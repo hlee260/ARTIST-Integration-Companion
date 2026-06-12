@@ -29,8 +29,6 @@ def rev_comp(seq: str) -> str:
     return "".join(RC.get(b, b) for b in reversed(seq))
 
 ALL_COMP = [rev_comp(ins) for ins in ALL_INS]
-# One exception: GGGACT paired with TGACCC (not rev_comp AGTCCC) — keep original
-ALL_COMP[9] = "TGACCC"
 
 
 # ── Utilities ────────────────────────────────────────────────────────────────
@@ -133,35 +131,84 @@ def calculate_unbound_dART(L0, dART0, K_D):
     return float(dART0 - dART_bound)
 
 # ── Candidate search ─────────────────────────────────────────────────────────
-def test_insulations(aptamer_seq: str, gate="O1", bp_threshold=0.5):
+# GGGATG is the canonical default insulation domain (ALL_INS[0] / ALL_COMP[0]).
+# It is ALWAYS tried first. The remaining 43 sequences are only attempted as a
+# fallback when GGGATG fails to insulate the aptamer.
+#
+# "Works" criterion: the 6-bp insulation stem (5' GGGAUG ... CAUCCC) must form in
+# the predicted transcript. We measure this with `count` — the number of base
+# pairs (from the partition function) between the 5' insulation region and its
+# downstream complement. WORKS_MIN_PAIRS is how many of those ~6 pairs must
+# register for the default to be accepted. Lower it to make GGGATG "stick" more
+# often; raise it to be stricter about insulation before accepting the default.
+WORKS_MIN_PAIRS = 4
+
+def _evaluate_insulation(apt: str, ins: str, ins_comp: str, gate: str,
+                         bp_threshold: float) -> dict:
+    """Fold one insulation candidate and score how well its insulation stem forms."""
+    cand = build_dart(apt, ins, ins_comp, gate)
+    rna = cand["rna"]
+
+    struct, mfe = RNA.fold(rna)
+    fc = RNA.fold_compound(rna)
+    fc.pf()
+    bpp = fc.bpp()
+
+    start = range(7)
+    target = range(6 + len(apt), 6 + len(apt) + 8)
+    count = sum(1 for i in start for j in target if bpp[i][j] > bp_threshold)
+
+    return {
+        **cand,
+        "structure": struct,
+        "mfe": mfe,
+        "bpp": bpp,
+        "count": count,
+    }
+
+def test_insulations(aptamer_seq: str, gate="O1", bp_threshold=0.5,
+                     works_min_pairs: int = WORKS_MIN_PAIRS):
+    """
+    Design a dART, defaulting to the GGGATG insulation domain.
+
+    Strategy:
+      1. Build the GGGATG (default) design first.
+      2. If its insulation stem forms well enough (count >= works_min_pairs),
+         return it immediately — no further search is performed.
+      3. Otherwise, sweep the remaining insulation sequences and return the
+         best fallback, ranked first by how well the insulation stem forms
+         (count) and then by minimum free energy (mfe) as a tie-breaker.
+
+    The returned dict carries two extra keys:
+      - "used_default": True if GGGATG was accepted, False if a fallback was used.
+      - "searched_alternatives": number of fallback sequences evaluated (0 when
+        the default worked).
+    """
     apt = sanitize_sequence(aptamer_seq)
-    best = None
     RNA.cvar.temperature = 37
 
-    for ins, ins_comp in zip(ALL_INS, ALL_COMP):
-        cand = build_dart(apt, ins, ins_comp, gate)
-        rna = cand["rna"]
+    # 1) Always evaluate the canonical default (GGGATG) first.
+    default_ins, default_comp = ALL_INS[0], ALL_COMP[0]   # "GGGATG" / "CATCCC"
+    default_cand = _evaluate_insulation(apt, default_ins, default_comp, gate, bp_threshold)
 
-        struct, mfe = RNA.fold(rna)
-        fc = RNA.fold_compound(rna)
-        fc.pf()
-        bpp = fc.bpp()
+    if default_cand["count"] >= works_min_pairs:
+        default_cand["used_default"] = True
+        default_cand["searched_alternatives"] = 0
+        return default_cand
 
-        start = range(7)
-        target = range(6 + len(apt), 6 + len(apt) + 8)
-        count = sum(1 for i in start for j in target if bpp[i][j] > bp_threshold)
+    # 2) Default insulation did not form well — fall back to the other sequences.
+    best = default_cand
+    n_searched = 0
+    for ins, ins_comp in zip(ALL_INS[1:], ALL_COMP[1:]):
+        cand = _evaluate_insulation(apt, ins, ins_comp, gate, bp_threshold)
+        n_searched += 1
+        # Prefer better insulation (higher count); break ties by lower MFE.
+        if (cand["count"] > best["count"]
+                or (cand["count"] == best["count"] and cand["mfe"] < best["mfe"])):
+            best = cand
 
-        candidate = {
-            **cand,
-            "structure": struct,
-            "mfe": mfe,
-            "bpp": bpp,
-            "count": count,
-        }
-
-        if best is None or mfe < best["mfe"]:
-            best = candidate
-
+    best["used_default"] = (best["ins"] == default_ins)
+    best["searched_alternatives"] = n_searched
     return best
 
 # ── Strands to order ─────────────────────────────────────────────────────────
@@ -239,6 +286,22 @@ def lig_series(kd):
         for m in multipliers
     ]
 
+def analog_titration_series(detect_low, detect_high, n=7):
+    """
+    Recommended experimental ligand concentrations spanning a desired analog
+    detection range. Returns a blank plus (n-1) log-spaced points from
+    detect_low to detect_high inclusive.
+    """
+    if not detect_low or not detect_high or detect_low <= 0 or detect_high <= 0:
+        return []
+    lo, hi = sorted((float(detect_low), float(detect_high)))
+    pts = np.logspace(np.log10(lo), np.log10(hi), max(int(n) - 1, 1))
+    series = [0.0] + pts.tolist()
+    return [
+        {"label": "0 (blank)" if i == 0 else f"Pt {i}", "conc": float(v)}
+        for i, v in enumerate(series)
+    ]
+
 def digital_titration_series(threshold):
     if threshold is None or threshold <= 0:
         return []
@@ -294,16 +357,20 @@ def fit_sigmoid(xData, yData):
     return best
 
 # ── Analog simulation ────────────────────────────────────────────────────────
-def simulate_analog_curve(dart0, kd, k_txn_user):
+def simulate_analog_curve(dart0, kd, k_txn_user, L0_list=None):
     # k_txn_user is per-second rate; multiply by 60 to get per-minute (matches HTML)
     k_txn = k_txn_user * 60
     k_hyb = 1e6 / 1e9 * 60
     k_deg = 0.001 * 60
     k_sd  = 1e4 / 1e9 * 60
     FQ0   = 250
-    # HTML: length=120, t = i*120/999  → t in [0, 119*120/999] ≈ [0, 14.29]
-    t = np.array([i * 120 / 999 for i in range(120)])
-    L0_list = np.arange(0, 10000)
+    t = np.linspace(0, 120, 120)
+    # Ligand grid. Default reproduces the original dense linear grid; callers
+    # (e.g. the dART sweep) may pass a coarser log-spaced grid for speed.
+    if L0_list is None:
+        L0_list = np.arange(0, 10000)
+    else:
+        L0_list = np.asarray(L0_list, dtype=float)
 
     y_final = []
     for L0 in L0_list:
@@ -351,10 +418,9 @@ def simulate_digital_curve(ref_dart, apt_dart0, kd, k_txn_ref_user, k_txn_apt_us
     k_txn_apt = k_txn_apt_user * 60
     k_th      = 1e6 / 1e9 * 60
     k_sd      = 1e4 / 1e9 * 60
-    k_deg     = 0.001 * 60
+    k_deg     = 0.000 * 60
     Reporter0 = 250
-    # HTML: length=240, t = i*240/2399  → t in [0, 239*240/2399] ≈ [0, 23.91]
-    t = np.array([i * 240 / 2399 for i in range(240)])
+    t = np.linspace(0, 120, 120)
     L0_list = np.logspace(0, 4, 101)
 
     y_final = []
@@ -380,6 +446,199 @@ def simulate_digital_curve(ref_dart, apt_dart0, kd, k_txn_ref_user, k_txn_apt_us
             threshold = float(L0_list[i])
 
     return L0_list, y_final, {"threshold": threshold, "maxY": float(np.max(y_final))}
+
+# ── Design recommendation (Analog): detection range → best dART ───────────────
+# Candidate dART concentrations swept when recommending an analog design.
+ANALOG_DART_SWEEP = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 120, 140, 160, 180, 200]
+
+def recommend_analog_dart(detect_low, detect_high, kd, k_txn,
+                          dart_candidates=None, sweep_points=160):
+    """
+    Recommend the dART concentration for a desired analog detection range.
+
+    The user specifies the ligand detection range they want to sense across,
+    [detect_low, detect_high] (nM). We sweep dART concentrations, simulate each
+    dose-response curve, and read off its detection range (L10–L90), Hill
+    coefficient (sigmoid slope) and EC50.
+
+    Objective:
+      Among dART concentrations whose L10–L90 span covers the requested range
+      (L10 <= detect_low and L90 >= detect_high), pick the one with the LARGEST
+      Hill coefficient — i.e. the steepest analog response that still spans the
+      whole requested range, giving the best signal change per unit ligand.
+      If no candidate fully covers the range, fall back to the one whose
+      detection range is closest to the request (smallest endpoint mismatch).
+
+    Returns a dict:
+      {
+        "sweep":        [ {dart, L10, L90, hill, ec50, maxY}, ... ],
+        "recommended":  <the chosen sweep row>,
+        "reason":       <str explaining why it was chosen>,
+        "covered":      <bool, whether the requested range was fully covered>,
+        "detect_low":   detect_low,
+        "detect_high":  detect_high,
+      }
+    """
+    if detect_low is None or detect_high is None or detect_low <= 0 or detect_high <= 0:
+        raise ValueError("Detection range must be two positive ligand concentrations.")
+    if detect_high < detect_low:
+        detect_low, detect_high = detect_high, detect_low
+
+    if dart_candidates is None:
+        dart_candidates = ANALOG_DART_SWEEP
+
+    # Coarser log-spaced ligand grid keeps the multi-curve sweep fast while still
+    # resolving L10/L90 across several decades.
+    grid = np.logspace(0, 4, int(sweep_points))
+
+    sweep = []
+    for dart in dart_candidates:
+        _, _, m = simulate_analog_curve(float(dart), kd, k_txn, L0_list=grid)
+        # The analog sensor is an inverse (OFF) response: output falls as ligand
+        # rises, so L10 sits at high ligand and L90 at low ligand. Store a sorted
+        # detection span [lo, hi] so range logic is direction-agnostic.
+        lo = hi = None
+        if m["L10"] is not None and m["L90"] is not None:
+            lo, hi = sorted((m["L10"], m["L90"]))
+        sweep.append({
+            "dart": float(dart),
+            "L10":  m["L10"],
+            "L90":  m["L90"],
+            "lo":   lo,
+            "hi":   hi,
+            "hill": m["slope"],
+            "ec50": m["inflection"],
+            "maxY": m["maxY"],
+        })
+
+    def covers(s):
+        return (s["lo"] is not None and s["hi"] is not None
+                and s["lo"] <= detect_low and s["hi"] >= detect_high)
+
+    covering = [s for s in sweep if covers(s) and s["hill"] is not None]
+    if covering:
+        recommended = max(covering, key=lambda s: s["hill"])
+        reason = ("Steepest response (max Hill coefficient) whose detection span "
+                  "still covers the requested range.")
+        covered = True
+    else:
+        def mismatch(s):
+            if s["lo"] is None or s["hi"] is None:
+                return float("inf")
+            return abs(s["lo"] - detect_low) + abs(s["hi"] - detect_high)
+        recommended = min(sweep, key=mismatch)
+        reason = ("No dART fully covers the requested range; chose the dART whose "
+                  "detection span is closest to the request.")
+        covered = False
+
+    return {
+        "sweep":       sweep,
+        "recommended": recommended,
+        "reason":      reason,
+        "covered":     covered,
+        "detect_low":  float(detect_low),
+        "detect_high": float(detect_high),
+    }
+
+# ── Design recommendation (Digital): threshold → best reference template ──────
+# Candidate reference-template concentrations swept when recommending a digital design.
+DIGITAL_REF_SWEEP = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+
+def recommend_digital_ref(target_threshold, kd, k_txn_ref, k_txn_apt, apt_dart,
+                          ref_candidates=None):
+    """
+    Recommend the reference-template concentration for a desired digital threshold.
+
+    The user specifies the ligand concentration at which the output should switch
+    fully ON (the threshold of the digital response). We sweep reference-template
+    concentrations, compute each curve's threshold, then interpolate (or, outside
+    the swept span, linearly extrapolate) to find the reference-template
+    concentration whose threshold matches the requested value.
+
+    Returns a dict:
+      {
+        "sweep":            [ {ref, threshold, maxY}, ... ],
+        "recommended_ref":  <float, interpolated/extrapolated ref template nM>,
+        "predicted_threshold": <float, threshold expected at recommended_ref>,
+        "nearest":          <the swept row whose threshold is closest to target>,
+        "extrapolated":     <bool, True if target lies outside the swept thresholds>,
+        "target_threshold": target_threshold,
+      }
+    """
+    if target_threshold is None or target_threshold <= 0:
+        raise ValueError("Target threshold must be a positive ligand concentration.")
+
+    if ref_candidates is None:
+        ref_candidates = DIGITAL_REF_SWEEP
+
+    sweep = []
+    for ref in ref_candidates:
+        _, _, m = simulate_digital_curve(float(ref), apt_dart, kd, k_txn_ref, k_txn_apt)
+        if m["threshold"] is not None:
+            sweep.append({
+                "ref":       float(ref),
+                "threshold": float(m["threshold"]),
+                "maxY":      float(m["maxY"]),
+            })
+
+    if not sweep:
+        raise ValueError("Could not determine a threshold for any reference-template "
+                         "concentration with these parameters.")
+
+    # Nearest swept point (always available as a robust fallback).
+    nearest = min(sweep, key=lambda s: abs(s["threshold"] - target_threshold))
+
+    # Build (threshold -> ref) relationship, sorted and de-duplicated by threshold,
+    # so we can interpolate the ref that yields the requested threshold.
+    pts = sorted(sweep, key=lambda s: s["threshold"])
+    th = np.array([p["threshold"] for p in pts])
+    rf = np.array([p["ref"] for p in pts])
+    # Collapse duplicate thresholds (keep mean ref) so interpolation is well-defined.
+    uniq_th, idx = np.unique(th, return_inverse=True)
+    uniq_rf = np.array([rf[idx == k].mean() for k in range(len(uniq_th))])
+
+    extrapolated = bool(target_threshold < uniq_th[0] or target_threshold > uniq_th[-1])
+
+    if len(uniq_th) == 1:
+        recommended_ref = float(uniq_rf[0])
+    elif not extrapolated:
+        recommended_ref = float(np.interp(target_threshold, uniq_th, uniq_rf))
+    else:
+        # Linear extrapolation from the two nearest end points.
+        if target_threshold < uniq_th[0]:
+            x0, x1, y0, y1 = uniq_th[0], uniq_th[1], uniq_rf[0], uniq_rf[1]
+        else:
+            x0, x1, y0, y1 = uniq_th[-2], uniq_th[-1], uniq_rf[-2], uniq_rf[-1]
+        slope = (y1 - y0) / (x1 - x0) if x1 != x0 else 0.0
+        recommended_ref = float(y0 + slope * (target_threshold - x0))
+
+    # Predicted threshold at the recommended ref (linear, extrapolating at ends
+    # so it stays consistent with an extrapolated recommended_ref).
+    ref_sorted = sorted(sweep, key=lambda s: s["ref"])
+    rr = np.array([p["ref"] for p in ref_sorted])
+    tt = np.array([p["threshold"] for p in ref_sorted])
+    if len(rr) >= 2:
+        if recommended_ref <= rr[0]:
+            x0, x1, y0, y1 = rr[0], rr[1], tt[0], tt[1]
+        elif recommended_ref >= rr[-1]:
+            x0, x1, y0, y1 = rr[-2], rr[-1], tt[-2], tt[-1]
+        else:
+            predicted_threshold = float(np.interp(recommended_ref, rr, tt))
+            x0 = None
+        if x0 is not None:
+            slope = (y1 - y0) / (x1 - x0) if x1 != x0 else 0.0
+            predicted_threshold = float(y0 + slope * (recommended_ref - x0))
+    else:
+        predicted_threshold = float(tt[0])
+
+    return {
+        "sweep":               sweep,
+        "recommended_ref":     recommended_ref,
+        "predicted_threshold": predicted_threshold,
+        "nearest":             nearest,
+        "extrapolated":        extrapolated,
+        "target_threshold":    float(target_threshold),
+    }
 
 # ── Kd Fitting from experimental data ────────────────────────────────────────
 from scipy.optimize import minimize
