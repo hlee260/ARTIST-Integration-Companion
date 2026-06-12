@@ -24,7 +24,8 @@ from ARTISTIC import (
     sanitize_sequence, test_insulations, get_order_strands, get_digital_strands,
     simulate_digital_curve, simulate_analog_curve,
     lig_series, salt_rows, parse_salt,
-    digital_titration_series
+    digital_titration_series, analog_titration_series,
+    recommend_analog_dart, recommend_digital_ref,
 )
 
 # ── Worker thread ─────────────────────────────────────────────────────────────
@@ -73,82 +74,83 @@ SWEEP_CONCS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
 SWEEP_COLORS = ["#ff4444","#ff6644","#ff8844","#ffaa44","#ffcc44",
                 "#ccff44","#88ff44","#44ff88","#44ffaa","#44ffcc"]
 
-def make_analog_plot(x, y, metrics, dart_nM, title_suffix=""):
-    """Single analog curve with annotation lines."""
+def make_analog_recommend_plot(rec_curve, sweep_curves, result):
+    """
+    Plot the recommended analog curve prominently over a faded sweep, with the
+    requested detection range shaded and the recommended L10/L90/EC50 marked.
+
+    rec_curve    : (x, y) arrays for the recommended dART (high-res)
+    sweep_curves : list of (dart, x, y) for context (faded)
+    result       : dict returned by recommend_analog_dart
+    """
+    rec = result["recommended"]
     fig, ax = plt.subplots(figsize=(6.5, 4.2), dpi=110)
     ax.set_facecolor("white"); fig.patch.set_facecolor("white")
-    ax.plot(x, y, color="#ffcc44", linewidth=2.5)
+
+    # Faded sweep for context
+    for dart, x, y in sweep_curves:
+        ax.plot(x, y, color="#bbbbbb", linewidth=1.0, alpha=0.55, zorder=1)
+
+    # Shaded requested detection range
+    lo, hi = result["detect_low"], result["detect_high"]
+    ax.axvspan(lo, hi, color="#ffe08a", alpha=0.35, zorder=0,
+               label=f"Requested range {lo:.0f}–{hi:.0f} nM")
+
+    # Recommended curve
+    xr, yr = rec_curve
+    ax.plot(xr, yr, color="#e6a800", linewidth=2.8, zorder=3,
+            label=f"Recommended dART = {rec['dart']:.0f} nM")
+
+    if rec.get("lo") is not None and rec.get("hi") is not None:
+        ax.axvline(rec["lo"], color="red", lw=1.4, ls="--", zorder=2,
+                   label=f"L90 = {rec['lo']:.1f} nM")
+        ax.axvline(rec["hi"], color="red", lw=1.4, ls="--", zorder=2,
+                   label=f"L10 = {rec['hi']:.1f} nM")
+    if rec.get("ec50"):
+        ax.axvline(rec["ec50"], color="green", lw=1.4, ls=":", zorder=2,
+                   label=f"EC50 = {rec['ec50']:.1f} nM")
+
     ax.set_xscale("log")
     ax.set_xlabel("[Ligand] (nM, log scale)", color="black", fontsize=11)
     ax.set_ylabel("[Reacted Reporter] (nM)", color="black", fontsize=11)
-    ax.set_title(f"Analog response — {dart_nM} nM dART{title_suffix}", color="black", fontsize=12)
+    hill = rec.get("hill")
+    htxt = f"{hill:.2f}" if hill is not None else "N/A"
+    ax.set_title(f"Analog design — recommended dART {rec['dart']:.0f} nM",
+                 color="black", fontsize=12)
     ax.tick_params(colors="black"); ax.spines[:].set_color("black")
     ax.grid(True, alpha=0.15, color="black")
-    if metrics.get("L10") is not None:
-        ax.axvline(metrics["L10"], color="red", lw=1.8, ls="--",
-                   label=f"L10 = {metrics['L10']:.1f} nM")
-    if metrics.get("L90") is not None:
-        ax.axvline(metrics["L90"], color="red", lw=1.8, ls="--",
-                   label=f"L90 = {metrics['L90']:.1f} nM")
-    if metrics.get("inflection"):
-        ax.axvline(metrics["inflection"], color="green", lw=1.8, ls=":",
-                   label=f"EC50 = {metrics['inflection']:.1f} nM")
-    ax.legend(fontsize=15)
+    ax.legend(fontsize=8)
     fig.tight_layout()
     return fig_to_pixmap(fig)
 
-def make_analog_sweep_plot(kd, k_txn):
-    """Multi-curve analog sweep: dART 10–100 nM."""
+def make_digital_recommend_plot(rec_curve, sweep_curves, result):
+    """
+    Plot the recommended digital curve over a faded reference-template sweep,
+    with the requested threshold marked.
+    """
     fig, ax = plt.subplots(figsize=(6.5, 4.2), dpi=110)
     ax.set_facecolor("white"); fig.patch.set_facecolor("white")
-    for dart, color in zip(SWEEP_CONCS, SWEEP_COLORS):
-        x, y, _ = simulate_analog_curve(dart, kd, k_txn)
-        ax.plot(x, y, color=color, linewidth=1.8, alpha=0.85, label=f"{dart} nM")
-    ax.set_xscale("log")
-    ax.set_xlabel("[Ligand] (nM, log scale)", color="black", fontsize=11)
-    ax.set_ylabel("[Reacted Reporter] (nM)", color="black", fontsize=11)
-    ax.set_title("Analog response — Sweep dART 10–100 nM", color="black", fontsize=12)
-    ax.tick_params(colors="black"); ax.spines[:].set_color("black")
-    ax.grid(True, alpha=0.15, color="black")
-    ax.legend(fontsize=8, ncol=2, title="[dART]", title_fontsize=8)
-    fig.tight_layout()
-    return fig_to_pixmap(fig)
 
-def make_digital_plot(x, y, metrics, ref_nM):
-    """Single digital curve."""
-    fig, ax = plt.subplots(figsize=(6.5, 4.2), dpi=110)
-    ax.set_facecolor("white"); fig.patch.set_facecolor("white")
-    ax.plot(x, y, color="#ffcc44", linewidth=2.5)
+    for ref, x, y in sweep_curves:
+        ax.plot(x, y, color="#bbbbbb", linewidth=1.0, alpha=0.55, zorder=1)
+
+    target = result["target_threshold"]
+    ax.axvline(target, color="#cc0000", lw=2.0, ls="--", zorder=2,
+               label=f"Requested threshold = {target:.0f} nM")
+
+    xr, yr = rec_curve
+    rref = result["recommended_ref"]
+    ax.plot(xr, yr, color="#e6a800", linewidth=2.8, zorder=3,
+            label=f"Recommended Ref template = {rref:.0f} nM")
+
     ax.set_xscale("log")
     ax.set_xlabel("[Ligand] (nM, log scale)", color="black", fontsize=11)
     ax.set_ylabel("[Reacted Reporter] (nM)", color="black", fontsize=11)
-    ax.set_title(f"Digital response — Reference template {ref_nM} nM", color="black", fontsize=12)
+    ax.set_title(f"Digital design — recommended Ref template {rref:.0f} nM",
+                 color="black", fontsize=12)
     ax.tick_params(colors="black"); ax.spines[:].set_color("black")
     ax.grid(True, alpha=0.15, color="black", which="both")
-    if metrics.get("threshold"):
-        ax.axvline(metrics["threshold"], color="#ff4444", lw=1.8, ls="--",
-                   label=f"Threshold ≈ {metrics['threshold']:.1f} nM")
-    ax.legend(fontsize=15)
-    fig.tight_layout()
-    return fig_to_pixmap(fig)
-
-def make_digital_sweep_plot(kd, k_txn_ref, k_txn_apt, apt_dart):
-    """Multi-curve digital sweep: Ref dART 10–100 nM."""
-    fig, ax = plt.subplots(figsize=(6.5, 4.2), dpi=110)
-    ax.set_facecolor("white"); fig.patch.set_facecolor("white")
-    for ref, color in zip(SWEEP_CONCS, SWEEP_COLORS):
-        x, y, metrics = simulate_digital_curve(ref, apt_dart, kd, k_txn_ref, k_txn_apt)
-        ax.plot(x, y, color=color, linewidth=1.8, alpha=0.85, label=f"Ref {ref} nM")
-        if metrics.get("threshold"):
-            ax.axvline(metrics["threshold"], color=color, lw=1.2, ls="--", alpha=0.45)
-    ax.set_xscale("log")
-    ax.set_xlabel("[Ligand] (nM, log scale)", color="black", fontsize=11)
-    ax.set_ylabel("[Reacted Reporter] (nM)", color="black", fontsize=11)
-    ax.set_title("Digital response — Sweep Ref dART 10–100 nM", color="black", fontsize=12)
-    ax.tick_params(colors="black"); ax.spines[:].set_color("black")
-    ax.grid(True, alpha=0.15, color="black", which="both")
-    ax.legend(fontsize=8, labelcolor="black", ncol=2,
-              title="[Ref template]", title_fontsize=8)
+    ax.legend(fontsize=8)
     fig.tight_layout()
     return fig_to_pixmap(fig)
 
@@ -313,10 +315,17 @@ class MainWindow(QMainWindow):
         gate = self._last_gate
         salt_str = self.design_salt.text().strip()
 
+        if best.get("used_default"):
+            ins_status = "GGGATG default — accepted (insulation stem forms)"
+        else:
+            ins_status = (f"GGGATG default rejected — fallback after searching "
+                          f"{best.get('searched_alternatives', 0)} alternatives")
+
         lines = [
             f"Gate:          {gate}",
             f"Insulation:    {best['ins']}",
             f"Ins Comp:      {best['insComp']}",
+            f"Ins status:    {ins_status}",
             f"Template len:  {len(best['template'])} nt",
             f"RNA len:       {len(best['rna'])} nt",
             f"MFE:           {best['mfe']:.2f} kcal/mol",
@@ -399,7 +408,7 @@ class MainWindow(QMainWindow):
         # Parameters
         pg = QGroupBox("Analog Sensor Parameters")
         grid = QGridLayout(pg)
-                
+
         grid.addWidget(QLabel("Kd (nM):"), 0, 0)
         self.ana_kd = QDoubleSpinBox()
         self.ana_kd.setRange(0.001, 1_000_000_000_000); self.ana_kd.setDecimals(3)
@@ -412,34 +421,27 @@ class MainWindow(QMainWindow):
         self.ana_ktxn.setValue(0.006)
         grid.addWidget(self.ana_ktxn, 1, 1)
 
-        # Curve mode: single slider vs sweep
-        grid.addWidget(QLabel("Curve mode:"), 3, 0)
-        mode_row = QWidget(); mrl = QHBoxLayout(mode_row); mrl.setContentsMargins(0,0,0,0)
-        self.ana_single_btn = QRadioButton("Single dART concentration")
-        self.ana_sweep_btn  = QRadioButton("Sweep dART 10–100 nM")
-        self.ana_single_btn.setChecked(True)
-        self.ana_single_btn.toggled.connect(self._ana_mode_changed)
-        mrl.addWidget(self.ana_single_btn); mrl.addWidget(self.ana_sweep_btn)
-        grid.addWidget(mode_row, 3, 1)
+        # Desired detection range (the user input that drives the design)
+        grid.addWidget(QLabel("Desired detection range (nM):"), 2, 0)
+        range_row = QWidget(); rrl = QHBoxLayout(range_row); rrl.setContentsMargins(0,0,0,0)
+        self.ana_detect_low = QDoubleSpinBox()
+        self.ana_detect_low.setRange(0.001, 1_000_000); self.ana_detect_low.setDecimals(3)
+        self.ana_detect_low.setValue(10.0); self.ana_detect_low.setSuffix(" nM")
+        self.ana_detect_high = QDoubleSpinBox()
+        self.ana_detect_high.setRange(0.001, 1_000_000); self.ana_detect_high.setDecimals(3)
+        self.ana_detect_high.setValue(300.0); self.ana_detect_high.setSuffix(" nM")
+        rrl.addWidget(QLabel("L90")); rrl.addWidget(self.ana_detect_low)
+        rrl.addWidget(QLabel("L10")); rrl.addWidget(self.ana_detect_high)
+        grid.addWidget(range_row, 2, 1)
 
-        # Slider row (shown only in single mode)
-        self.ana_slider_widget = QWidget()
-        slw = QHBoxLayout(self.ana_slider_widget); slw.setContentsMargins(0,0,0,0)
-        slw.addWidget(QLabel("dART conc:"))
-        self.ana_dart_slider = QSlider(Qt.Horizontal)
-        self.ana_dart_slider.setRange(10, 100); self.ana_dart_slider.setSingleStep(5)
-        self.ana_dart_slider.setPageStep(10); self.ana_dart_slider.setValue(25)
-        self.ana_dart_slider.setTickInterval(10); self.ana_dart_slider.setTickPosition(QSlider.TicksBelow)
-        self.ana_dart_val_lbl = QLabel("25 nM")
-        self.ana_dart_val_lbl.setMinimumWidth(55)
-        self.ana_dart_slider.valueChanged.connect(
-            lambda v: self.ana_dart_val_lbl.setText(f"{v} nM"))
-        slw.addWidget(self.ana_dart_slider); slw.addWidget(self.ana_dart_val_lbl)
-        grid.addWidget(self.ana_slider_widget, 4, 0, 1, 2)
+        self.ana_run_btn = QPushButton("Find best dART for this range")
+        self.ana_run_btn.setFixedHeight(36)
+        self.ana_run_btn.clicked.connect(self._on_run_analog)
+        grid.addWidget(self.ana_run_btn, 3, 0, 1, 2)
 
-        run_btn = QPushButton("Run Simulation")
-        run_btn.setFixedHeight(36); run_btn.clicked.connect(self._on_run_analog)
-        grid.addWidget(run_btn, 5, 0, 1, 2)
+        self.ana_progress = QProgressBar()
+        self.ana_progress.setRange(0, 0); self.ana_progress.setVisible(False)
+        grid.addWidget(self.ana_progress, 4, 0, 1, 2)
         layout.addWidget(pg)
 
         # Results row
@@ -448,17 +450,28 @@ class MainWindow(QMainWindow):
         # Left: tables
         left = QWidget(); ll = QVBoxLayout(left)
 
-        mg = QGroupBox("Metrics")
+        mg = QGroupBox("Recommended Design")
         mgl = QVBoxLayout(mg)
         self.ana_metrics_table = QTableWidget()
         self.ana_metrics_table.setColumnCount(2)
         self.ana_metrics_table.setHorizontalHeaderLabels(["Metric", "Value"])
         self.ana_metrics_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.ana_metrics_table.setMaximumHeight(190)
+        self.ana_metrics_table.setMaximumHeight(230)
         mgl.addWidget(self.ana_metrics_table)
         ll.addWidget(mg)
 
-        lg = QGroupBox("Ligand Concentration Series")
+        sg = QGroupBox("dART Sweep (detection span & EC50)")
+        sgl = QVBoxLayout(sg)
+        self.ana_sweep_table = QTableWidget()
+        self.ana_sweep_table.setColumnCount(4)
+        self.ana_sweep_table.setHorizontalHeaderLabels(
+            ["dART (nM)", "L90 (nM)", "L10 (nM)", "EC50 (nM)"])
+        self.ana_sweep_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.ana_sweep_table.setMaximumHeight(220)
+        sgl.addWidget(self.ana_sweep_table)
+        ll.addWidget(sg)
+
+        lg = QGroupBox("Ligand Concentration Series (across detection range)")
         lgl = QVBoxLayout(lg)
         self.ana_lig_table = QTableWidget()
         self.ana_lig_table.setColumnCount(2)
@@ -472,7 +485,7 @@ class MainWindow(QMainWindow):
         # Right: plot
         plot_g = QGroupBox("Dose-Response Curve")
         pgl = QVBoxLayout(plot_g)
-        self.ana_plot_label = QLabel("Plot will appear after simulation.")
+        self.ana_plot_label = QLabel("Plot will appear after running.")
         self.ana_plot_label.setAlignment(Qt.AlignCenter)
         self.ana_plot_label.setMinimumSize(520, 380)
         self.ana_plot_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -482,50 +495,81 @@ class MainWindow(QMainWindow):
         layout.addLayout(results)
         return w
 
-    def _ana_mode_changed(self):
-        self.ana_slider_widget.setVisible(self.ana_single_btn.isChecked())
-
     def _on_run_analog(self):
-        kd     = self.ana_kd.value()
-        k_txn  = self.ana_ktxn.value()
-        sweep  = self.ana_sweep_btn.isChecked()
+        kd    = self.ana_kd.value()
+        k_txn = self.ana_ktxn.value()
+        lo    = self.ana_detect_low.value()
+        hi    = self.ana_detect_high.value()
+        if hi <= lo:
+            self.ana_plot_label.setText("⚠  Detection range 'L10' must exceed 'L90'.")
+            return
 
-        if sweep:
-            # Sweep mode — no single-curve metrics to show
-            self.ana_metrics_table.setRowCount(0)
-            px = make_analog_sweep_plot(kd, k_txn)
-        else:
-            dart = float(self.ana_dart_slider.value())
-            x, y, metrics = simulate_analog_curve(dart, kd, k_txn)
+        self.ana_run_btn.setEnabled(False)
+        self.ana_progress.setVisible(True)
+        self.ana_plot_label.setText("Sweeping dART concentrations — please wait…")
 
-            rows = [
-                ("dART concentration", f"{dart:.0f} nM"),
-                ("Kd", f"{kd:.3f} nM"),
-                ("k_txn", f"{k_txn:.4f}"),
-                ("RNase H", "6 U/mL recommended"),
-                ("Detection range (L10–L90)",
-                 f"{metrics['L10']:.2f} – {metrics['L90']:.2f} nM"
-                 if metrics["L10"] is not None and metrics["L90"] is not None else "N/A"),
-                ("EC50",
-                 f"{metrics['inflection']:.2f} nM" if metrics["inflection"] else "N/A"),
-                ("Sensitivity",
-                 f"{metrics['slope']:.3f}" if metrics["slope"] else "N/A"),
-                ("Max signal", f"{metrics['maxY']:.2f}"),
-            ]
-            self.ana_metrics_table.setRowCount(len(rows))
-            for i, (k, v) in enumerate(rows):
-                self.ana_metrics_table.setItem(i, 0, QTableWidgetItem(k))
-                self.ana_metrics_table.setItem(i, 1, QTableWidgetItem(v))
+        self._ana_worker = _AnalogRecWorker(lo, hi, kd, k_txn)
+        self._ana_worker.done.connect(self._on_analog_done)
+        self._ana_worker.error.connect(self._on_analog_error)
+        self._ana_worker.start()
 
-            # ligand series
-            ligs = lig_series(kd)
-            self.ana_lig_table.setRowCount(len(ligs))
-            for i, row in enumerate(ligs):
-                self.ana_lig_table.setItem(i, 0, QTableWidgetItem(row["label"]))
-                self.ana_lig_table.setItem(i, 1, QTableWidgetItem(str(row["conc"])))
+    def _on_analog_error(self, msg):
+        self.ana_run_btn.setEnabled(True)
+        self.ana_progress.setVisible(False)
+        self.ana_plot_label.setText(f"Error: {msg}")
 
-            px = make_analog_plot(x, y, metrics, dart)
+    def _on_analog_done(self, payload):
+        self.ana_run_btn.setEnabled(True)
+        self.ana_progress.setVisible(False)
 
+        result = payload["result"]
+        rec    = result["recommended"]
+        kd     = payload["kd"]
+        k_txn  = payload["k_txn"]
+
+        span_txt = (f"{rec['lo']:.2f} – {rec['hi']:.2f} nM"
+                    if rec["lo"] is not None and rec["hi"] is not None else "N/A")
+        cover_txt = "Yes — fully covers request" if result["covered"] else "No — closest available"
+        rows = [
+            ("Recommended dART", f"{rec['dart']:.0f} nM"),
+            ("Requested range", f"{result['detect_low']:.2f} – {result['detect_high']:.2f} nM"),
+            ("Achieved detection span", span_txt),
+            ("Covers requested range?", cover_txt),
+            ("Hill coefficient", f"{rec['hill']:.3f}" if rec["hill"] is not None else "N/A"),
+            ("EC50", f"{rec['ec50']:.2f} nM" if rec["ec50"] else "N/A"),
+            ("Max signal", f"{rec['maxY']:.2f} nM"),
+            ("Kd", f"{kd:.3f} nM"),
+            ("k_txn", f"{k_txn:.4f}"),
+            ("RNase H", "6 U/mL recommended"),
+        ]
+        self.ana_metrics_table.setRowCount(len(rows))
+        for i, (k, v) in enumerate(rows):
+            self.ana_metrics_table.setItem(i, 0, QTableWidgetItem(k))
+            self.ana_metrics_table.setItem(i, 1, QTableWidgetItem(v))
+
+        # Sweep table (highlight recommended row)
+        sweep = result["sweep"]
+        self.ana_sweep_table.setRowCount(len(sweep))
+        for i, s in enumerate(sweep):
+            lo_s  = f"{s['lo']:.1f}" if s["lo"] is not None else "—"
+            hi_s  = f"{s['hi']:.1f}" if s["hi"] is not None else "—"
+            ec50_s = f"{s['ec50']:.1f}" if s["ec50"] is not None else "—"
+            vals = [f"{s['dart']:.0f}", lo_s, hi_s, ec50_s]
+            for j, v in enumerate(vals):
+                item = QTableWidgetItem(v)
+                if s["dart"] == rec["dart"]:
+                    item.setBackground(Qt.green)
+                self.ana_sweep_table.setItem(i, j, item)
+
+        # Ligand series spanning the requested detection range
+        ligs = analog_titration_series(result["detect_low"], result["detect_high"])
+        self.ana_lig_table.setRowCount(len(ligs))
+        for i, row in enumerate(ligs):
+            self.ana_lig_table.setItem(i, 0, QTableWidgetItem(row["label"]))
+            self.ana_lig_table.setItem(i, 1, QTableWidgetItem(f"{row['conc']:.3f}"))
+
+        px = make_analog_recommend_plot(
+            payload["rec_curve"], payload["sweep_curves"], result)
         if px:
             self.ana_plot_label.setPixmap(
                 px.scaled(self.ana_plot_label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
@@ -545,7 +589,7 @@ class MainWindow(QMainWindow):
         self.dig_kd.setRange(0.001, 1_000_000_000_000); self.dig_kd.setDecimals(3)
         self.dig_kd.setValue(25.0); self.dig_kd.setSuffix(" nM")
         grid.addWidget(self.dig_kd, 0, 1)
-        
+
         grid.addWidget(QLabel("k_txn Ref template:"), 1, 0)
         self.dig_ktxn_ref = QDoubleSpinBox()
         self.dig_ktxn_ref.setRange(0.0001, 1.0); self.dig_ktxn_ref.setDecimals(4)
@@ -564,49 +608,49 @@ class MainWindow(QMainWindow):
         self.dig_apt.setSuffix(" nM")
         grid.addWidget(self.dig_apt, 3, 1)
 
-        # Curve mode
-        grid.addWidget(QLabel("Curve mode:"), 5, 0)
-        mode_row = QWidget(); mrl = QHBoxLayout(mode_row); mrl.setContentsMargins(0,0,0,0)
-        self.dig_single_btn = QRadioButton("Single Ref dART concentration")
-        self.dig_sweep_btn  = QRadioButton("Sweep Ref dART 10–100 nM")
-        self.dig_single_btn.setChecked(True)
-        self.dig_single_btn.toggled.connect(self._dig_mode_changed)
-        mrl.addWidget(self.dig_single_btn); mrl.addWidget(self.dig_sweep_btn)
-        grid.addWidget(mode_row, 5, 1)
+        # Desired threshold concentration (the user input that drives the design)
+        grid.addWidget(QLabel("Desired threshold (nM):"), 4, 0)
+        self.dig_threshold = QDoubleSpinBox()
+        self.dig_threshold.setRange(0.001, 1_000_000); self.dig_threshold.setDecimals(3)
+        self.dig_threshold.setValue(100.0); self.dig_threshold.setSuffix(" nM")
+        self.dig_threshold.setToolTip(
+            "Ligand concentration at which the output should switch fully ON.")
+        grid.addWidget(self.dig_threshold, 4, 1)
 
-        # Slider
-        self.dig_slider_widget = QWidget()
-        slw = QHBoxLayout(self.dig_slider_widget); slw.setContentsMargins(0,0,0,0)
-        slw.addWidget(QLabel("Ref dART:"))
-        self.dig_ref_slider = QSlider(Qt.Horizontal)
-        self.dig_ref_slider.setRange(10, 100); self.dig_ref_slider.setSingleStep(5)
-        self.dig_ref_slider.setPageStep(10); self.dig_ref_slider.setValue(25)
-        self.dig_ref_slider.setTickInterval(10); self.dig_ref_slider.setTickPosition(QSlider.TicksBelow)
-        self.dig_ref_val_lbl = QLabel("25 nM")
-        self.dig_ref_val_lbl.setMinimumWidth(55)
-        self.dig_ref_slider.valueChanged.connect(
-            lambda v: self.dig_ref_val_lbl.setText(f"{v} nM"))
-        slw.addWidget(self.dig_ref_slider); slw.addWidget(self.dig_ref_val_lbl)
-        grid.addWidget(self.dig_slider_widget, 6, 0, 1, 2)
+        self.dig_run_btn = QPushButton("Find best Ref template for this threshold")
+        self.dig_run_btn.setFixedHeight(36)
+        self.dig_run_btn.clicked.connect(self._on_run_digital)
+        grid.addWidget(self.dig_run_btn, 5, 0, 1, 2)
 
-        run_btn = QPushButton("Run Simulation")
-        run_btn.setFixedHeight(36); run_btn.clicked.connect(self._on_run_digital)
-        grid.addWidget(run_btn, 7, 0, 1, 2)
+        self.dig_progress = QProgressBar()
+        self.dig_progress.setRange(0, 0); self.dig_progress.setVisible(False)
+        grid.addWidget(self.dig_progress, 6, 0, 1, 2)
         layout.addWidget(pg)
 
         results = QHBoxLayout()
 
         left = QWidget(); ll = QVBoxLayout(left)
 
-        mg = QGroupBox("Metrics")
+        mg = QGroupBox("Recommended Design")
         mgl = QVBoxLayout(mg)
         self.dig_metrics_table = QTableWidget()
         self.dig_metrics_table.setColumnCount(2)
         self.dig_metrics_table.setHorizontalHeaderLabels(["Metric", "Value"])
         self.dig_metrics_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.dig_metrics_table.setMaximumHeight(160)
+        self.dig_metrics_table.setMaximumHeight(200)
         mgl.addWidget(self.dig_metrics_table)
         ll.addWidget(mg)
+
+        sg = QGroupBox("Reference Template Sweep (threshold per ref conc.)")
+        sgl = QVBoxLayout(sg)
+        self.dig_sweep_table = QTableWidget()
+        self.dig_sweep_table.setColumnCount(3)
+        self.dig_sweep_table.setHorizontalHeaderLabels(
+            ["Ref template (nM)", "Threshold (nM)", "Max signal"])
+        self.dig_sweep_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.dig_sweep_table.setMaximumHeight(200)
+        sgl.addWidget(self.dig_sweep_table)
+        ll.addWidget(sg)
 
         lg = QGroupBox("Threshold-Centered Titration Series")
         lgl = QVBoxLayout(lg)
@@ -633,7 +677,7 @@ class MainWindow(QMainWindow):
 
         plot_g = QGroupBox("Dose-Response Curve")
         pgl = QVBoxLayout(plot_g)
-        self.dig_plot_label = QLabel("Plot will appear after simulation.")
+        self.dig_plot_label = QLabel("Plot will appear after running.")
         self.dig_plot_label.setAlignment(Qt.AlignCenter)
         self.dig_plot_label.setMinimumSize(520, 380)
         self.dig_plot_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -643,47 +687,91 @@ class MainWindow(QMainWindow):
         layout.addLayout(results)
         return w
 
-    def _dig_mode_changed(self):
-        self.dig_slider_widget.setVisible(self.dig_single_btn.isChecked())
-
     def _on_run_digital(self):
         kd        = self.dig_kd.value()
         k_txn_ref = self.dig_ktxn_ref.value()
         k_txn_apt = self.dig_ktxn_apt.value()
         apt_dart  = self.dig_apt.value()
-        sweep     = self.dig_sweep_btn.isChecked()
+        target    = self.dig_threshold.value()
 
-        if sweep:
-            self.dig_metrics_table.setRowCount(0)
-            px = make_digital_sweep_plot(kd, k_txn_ref, k_txn_apt, apt_dart)
+        self.dig_run_btn.setEnabled(False)
+        self.dig_progress.setVisible(True)
+        self.dig_plot_label.setText("Sweeping reference-template concentrations — please wait…")
+
+        self._dig_worker = _DigitalRecWorker(target, kd, k_txn_ref, k_txn_apt, apt_dart)
+        self._dig_worker.done.connect(self._on_digital_done)
+        self._dig_worker.error.connect(self._on_digital_error)
+        self._dig_worker.start()
+
+    def _on_digital_error(self, msg):
+        self.dig_run_btn.setEnabled(True)
+        self.dig_progress.setVisible(False)
+        self.dig_plot_label.setText(f"Error: {msg}")
+
+    def _on_digital_done(self, payload):
+        self.dig_run_btn.setEnabled(True)
+        self.dig_progress.setVisible(False)
+
+        result    = payload["result"]
+        kd        = payload["kd"]
+        apt_dart  = payload["apt_dart"]
+        rref      = result["recommended_ref"]
+        target    = result["target_threshold"]
+        predicted = result["predicted_threshold"]
+
+        # Honest reporting: warn when the requested threshold can't be matched.
+        if result["extrapolated"]:
+            match_note = "extrapolated beyond swept range"
+        elif abs(predicted - target) > 0.1 * max(target, 1e-9):
+            match_note = "approximate"
         else:
-            ref = float(self.dig_ref_slider.value())
-            x, y, metrics = simulate_digital_curve(ref, apt_dart, kd, k_txn_ref, k_txn_apt)
-            threshold = metrics["threshold"]
+            match_note = "matched"
 
-            rows = [
-                ("Kd", f"{kd:.3f} nM"),
-                ("Reference dART", f"{ref:.0f} nM"),
-                ("Aptamer dART", f"{apt_dart:.0f} nM"),
-                ("k_txn ref", f"{self.dig_ktxn_ref.value():.4f}"),
-                ("k_txn inverter", f"{self.dig_ktxn_apt.value():.4f}"),
-                ("Threshold", f"{threshold:.2f} nM" if threshold else "N/A"),
-                ("Max signal", f"{metrics['maxY']:.2f}"),
-            ]
-            self.dig_metrics_table.setRowCount(len(rows))
-            for i, (k, v) in enumerate(rows):
-                self.dig_metrics_table.setItem(i, 0, QTableWidgetItem(k))
-                self.dig_metrics_table.setItem(i, 1, QTableWidgetItem(v))
+        rows = [
+            ("Recommended Ref template", f"{rref:.1f} nM"),
+            ("Requested threshold", f"{target:.2f} nM"),
+            ("Predicted threshold at this ref", f"{predicted:.2f} nM ({match_note})"),
+            ("Aptamer dART", f"{apt_dart:.0f} nM"),
+            ("Kd", f"{kd:.3f} nM"),
+            ("k_txn ref", f"{payload['k_txn_ref']:.4f}"),
+            ("k_txn inverter", f"{payload['k_txn_apt']:.4f}"),
+        ]
+        self.dig_metrics_table.setRowCount(len(rows))
+        for i, (k, v) in enumerate(rows):
+            self.dig_metrics_table.setItem(i, 0, QTableWidgetItem(k))
+            self.dig_metrics_table.setItem(i, 1, QTableWidgetItem(v))
 
-            series = digital_titration_series(threshold)
-            self.dig_lig_table.setRowCount(len(series))
-            for i, row in enumerate(series):
-                self.dig_lig_table.setItem(i, 0, QTableWidgetItem(row["label"]))
-                self.dig_lig_table.setItem(i, 1, QTableWidgetItem(f"{row['conc']:.3f}"))
+        # Sweep table (highlight the swept row nearest the recommended ref).
+        # recommended_ref is interpolated/extrapolated, so it may not equal any
+        # swept value exactly — flag the closest swept template to it.
+        sweep = result["sweep"]
+        best_row = min(range(len(sweep)),
+                       key=lambda k: abs(sweep[k]["ref"] - rref)) if sweep else -1
+        self.dig_sweep_table.setRowCount(len(sweep))
+        for i, s in enumerate(sweep):
+            vals = [f"{s['ref']:.0f}", f"{s['threshold']:.1f}", f"{s['maxY']:.1f}"]
+            for j, v in enumerate(vals):
+                item = QTableWidgetItem(v)
+                if i == best_row:
+                    item.setBackground(Qt.green)
+                    if result["extrapolated"]:
+                        item.setToolTip(
+                            f"Closest swept template to the recommended "
+                            f"{rref:.1f} nM (recommendation is extrapolated "
+                            f"beyond this sweep).")
+                    else:
+                        item.setToolTip(
+                            f"Closest swept template to the recommended {rref:.1f} nM.")
+                self.dig_sweep_table.setItem(i, j, item)
 
-            px = make_digital_plot(x, y, metrics, ref)
+        # Titration series centered on the requested threshold
+        series = digital_titration_series(target)
+        self.dig_lig_table.setRowCount(len(series))
+        for i, row in enumerate(series):
+            self.dig_lig_table.setItem(i, 0, QTableWidgetItem(row["label"]))
+            self.dig_lig_table.setItem(i, 1, QTableWidgetItem(f"{row['conc']:.3f}"))
 
-        # ── Strands to order (always populated, uses design tab result if available)
+        # Strands to order (uses design tab result if available)
         gate     = self._last_gate
         ins      = self._last_best["ins"]      if self._last_best else "GGGATG"
         ins_comp = self._last_best["insComp"]  if self._last_best else "CATCCC"
@@ -695,6 +783,8 @@ class MainWindow(QMainWindow):
             self.dig_strands_table.setItem(i, 2, QTableWidgetItem(notes))
         self.dig_strands_table.resizeRowsToContents()
 
+        px = make_digital_recommend_plot(
+            payload["rec_curve"], payload["sweep_curves"], result)
         if px:
             self.dig_plot_label.setPixmap(
                 px.scaled(self.dig_plot_label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
@@ -990,6 +1080,96 @@ class _KdFitWorker(QThread):
                 "fit":         fit,
                 "multipliers": self.multipliers,
                 "slope_time":  self.slope_time,
+            })
+        except Exception as e:
+            import traceback
+            self.error.emit(traceback.format_exc())
+
+
+# ── Analog recommendation worker thread ───────────────────────────────────────
+class _AnalogRecWorker(QThread):
+    done  = Signal(object)
+    error = Signal(str)
+
+    def __init__(self, detect_low, detect_high, kd, k_txn):
+        super().__init__()
+        self.detect_low  = detect_low
+        self.detect_high = detect_high
+        self.kd          = kd
+        self.k_txn       = k_txn
+
+    def run(self):
+        try:
+            from ARTISTIC import recommend_analog_dart, simulate_analog_curve
+            result = recommend_analog_dart(
+                self.detect_low, self.detect_high, self.kd, self.k_txn)
+            rec = result["recommended"]
+
+            # High-resolution recommended curve for the foreground plot.
+            fine = np.logspace(0, 4, 400)
+            xr, yr, _ = simulate_analog_curve(rec["dart"], self.kd, self.k_txn, L0_list=fine)
+
+            # A handful of faded context curves (subset of the sweep).
+            coarse = np.logspace(0, 4, 160)
+            sweep = result["sweep"]
+            pick = sweep[::max(len(sweep) // 6, 1)]
+            sweep_curves = []
+            for s in pick:
+                x, y, _ = simulate_analog_curve(s["dart"], self.kd, self.k_txn, L0_list=coarse)
+                sweep_curves.append((s["dart"], x, y))
+
+            self.done.emit({
+                "result":       result,
+                "kd":           self.kd,
+                "k_txn":        self.k_txn,
+                "rec_curve":    (xr, yr),
+                "sweep_curves": sweep_curves,
+            })
+        except Exception as e:
+            import traceback
+            self.error.emit(traceback.format_exc())
+
+
+# ── Digital recommendation worker thread ──────────────────────────────────────
+class _DigitalRecWorker(QThread):
+    done  = Signal(object)
+    error = Signal(str)
+
+    def __init__(self, target_threshold, kd, k_txn_ref, k_txn_apt, apt_dart):
+        super().__init__()
+        self.target_threshold = target_threshold
+        self.kd               = kd
+        self.k_txn_ref        = k_txn_ref
+        self.k_txn_apt        = k_txn_apt
+        self.apt_dart         = apt_dart
+
+    def run(self):
+        try:
+            from ARTISTIC import recommend_digital_ref, simulate_digital_curve
+            result = recommend_digital_ref(
+                self.target_threshold, self.kd,
+                self.k_txn_ref, self.k_txn_apt, self.apt_dart)
+            rref = result["recommended_ref"]
+
+            xr, yr, _ = simulate_digital_curve(
+                rref, self.apt_dart, self.kd, self.k_txn_ref, self.k_txn_apt)
+
+            sweep = result["sweep"]
+            pick = sweep[::max(len(sweep) // 6, 1)]
+            sweep_curves = []
+            for s in pick:
+                x, y, _ = simulate_digital_curve(
+                    s["ref"], self.apt_dart, self.kd, self.k_txn_ref, self.k_txn_apt)
+                sweep_curves.append((s["ref"], x, y))
+
+            self.done.emit({
+                "result":       result,
+                "kd":           self.kd,
+                "k_txn_ref":    self.k_txn_ref,
+                "k_txn_apt":    self.k_txn_apt,
+                "apt_dart":     self.apt_dart,
+                "rec_curve":    (xr, yr),
+                "sweep_curves": sweep_curves,
             })
         except Exception as e:
             import traceback
